@@ -225,6 +225,37 @@
         .badge.method-post { background: #e8f5e9; color: #2e7d32; }
         .badge.method-put { background: #fff3e0; color: #f57c00; }
         .badge.method-delete { background: #ffebee; color: #c62828; }
+
+        .btn-delete {
+            background: #dc3545;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .btn-flush {
+            background: #dc3545;
+            margin-left: auto;
+        }
+
+        .btn-flush:hover {
+            background: #c82333;
+        }
+
+        .tasks-header-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .tasks-header-container h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -250,7 +281,10 @@
 
         <div id="tasksContainer" style="display: none;">
             <div class="tasks-section">
-                <div class="tasks-header" id="tasksHeader">Tasks</div>
+                <div class="tasks-header-container">
+                    <h2 id="tasksHeader">Tasks</h2>
+                    <button class="btn-flush" onclick="flushQueue()">Flush Queue</button>
+                </div>
                 <div id="tasksList"></div>
             </div>
         </div>
@@ -352,26 +386,31 @@
                                 <th>URL</th>
                                 <th>Schedule Time</th>
                                 <th>Dispatch Count</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${tasks.map((task, index) => {
                                 const taskName = task.name.split('/').pop();
+                                const taskPath = task.name.replace('projects/', '');
                                 const scheduleTime = task.scheduleTime ?
                                     new Date(task.scheduleTime.seconds * 1000).toLocaleString() : 'N/A';
                                 const method = task.httpRequest?.httpMethod || 'N/A';
                                 const url = task.httpRequest?.url || 'N/A';
 
                                 return `
-                                    <tr class="expandable" onclick="toggleTaskDetails(${index})">
-                                        <td>${taskName}</td>
-                                        <td><span class="badge method-${method.toLowerCase()}">${method}</span></td>
-                                        <td>${url}</td>
-                                        <td>${scheduleTime}</td>
-                                        <td>${task.dispatchCount || 0}</td>
+                                    <tr>
+                                        <td class="expandable" onclick="toggleTaskDetails(${index})">${taskName}</td>
+                                        <td class="expandable" onclick="toggleTaskDetails(${index})"><span class="badge method-${method.toLowerCase()}">${method}</span></td>
+                                        <td class="expandable" onclick="toggleTaskDetails(${index})">${url}</td>
+                                        <td class="expandable" onclick="toggleTaskDetails(${index})">${scheduleTime}</td>
+                                        <td class="expandable" onclick="toggleTaskDetails(${index})">${task.dispatchCount || 0}</td>
+                                        <td>
+                                            <button class="btn-delete" onclick="event.stopPropagation(); deleteTask('${taskPath}', '${taskName}')">Delete</button>
+                                        </td>
                                     </tr>
                                     <tr id="task-details-${index}" style="display: none;">
-                                        <td colspan="5">
+                                        <td colspan="6">
                                             <div class="task-details">
                                                 <strong>Headers:</strong>
                                                 <pre>${JSON.stringify(task.httpRequest?.headers || {}, null, 2)}</pre>
@@ -408,6 +447,67 @@
                 return JSON.stringify(parsed, null, 2);
             } catch {
                 return body;
+            }
+        }
+
+        // Delete a specific task
+        async function deleteTask(taskPath, taskName) {
+            if (!confirm(`Are you sure you want to delete task "${taskName}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/tasks/${taskPath}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to delete task');
+                }
+
+                const result = await response.json();
+                console.log('Task deleted:', result);
+
+                // Reload tasks for the current queue
+                if (selectedQueue) {
+                    loadTasks(selectedQueue);
+                }
+            } catch (error) {
+                console.error('Error deleting task:', error);
+                alert(`Error deleting task: ${error.message}`);
+            }
+        }
+
+        // Flush/purge all tasks in a queue
+        async function flushQueue() {
+            if (!selectedQueue) {
+                alert('No queue selected');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to flush ALL tasks from queue "${selectedQueue}"? This cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/queues/${selectedQueue}/purge`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to purge queue');
+                }
+
+                const result = await response.json();
+                console.log('Queue purged:', result);
+
+                // Reload tasks for the current queue
+                loadTasks(selectedQueue);
+            } catch (error) {
+                console.error('Error purging queue:', error);
+                alert(`Error purging queue: ${error.message}`);
             }
         }
 

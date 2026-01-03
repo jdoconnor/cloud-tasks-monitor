@@ -132,6 +132,52 @@ app.get('/api/tasks/:taskPath(*)', async (req, res) => {
   }
 });
 
+// API endpoint to delete a specific task
+app.delete('/api/tasks/:taskPath(*)', async (req, res) => {
+  try {
+    const taskPath = req.params.taskPath;
+    const name = `projects/${taskPath}`;
+
+    await client.deleteTask({ name });
+
+    res.json({
+      success: true,
+      message: 'Task deleted successfully',
+      taskName: name
+    });
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    res.status(500).json({
+      error: error.message,
+      details: 'Failed to delete task'
+    });
+  }
+});
+
+// API endpoint to purge/flush all tasks in a queue
+app.post('/api/queues/:queueName/purge', async (req, res) => {
+  try {
+    const project = process.env.GCP_PROJECT || 'local-project';
+    const location = process.env.GCP_LOCATION || 'us-central1';
+    const queueName = req.params.queueName;
+    const name = `projects/${project}/locations/${location}/queues/${queueName}`;
+
+    await client.purgeQueue({ name });
+
+    res.json({
+      success: true,
+      message: 'Queue purged successfully',
+      queueName: queueName
+    });
+  } catch (error) {
+    console.error('Error purging queue:', error);
+    res.status(500).json({
+      error: error.message,
+      details: 'Failed to purge queue'
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
