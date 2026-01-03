@@ -1,6 +1,8 @@
 # Cloud Tasks Monitor
 
-A web-based UI for monitoring Google Cloud Tasks Emulator. This tool provides real-time visibility into your Cloud Tasks queues and tasks during local development.
+A web-based UI for monitoring Google Cloud Tasks Emulator. This tool provides real-time visibility into your Cloud Tasks queues and tasks during local development. 
+
+This was originally written for development of https://dogshitai.com, but it may be helpful to others. Have fun.
 
 ## Features
 
