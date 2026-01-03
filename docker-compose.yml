@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # Cloud Tasks Emulator
+  cloud-tasks-emulator:
+    image: ghcr.io/aertje/cloud-tasks-emulator:latest
+    ports:
+      - "8123:8123"
+    environment:
+      - PORT=8123
+      - QUEUE_YAML_PATH=/etc/queue.yaml
+    volumes:
+      - ./queue.yaml:/etc/queue.yaml:ro
+    networks:
+      - cloud-tasks-network
+
+  # Cloud Tasks Monitor UI
+  cloud-tasks-monitor:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - CLOUD_TASKS_EMULATOR_HOST=cloud-tasks-emulator:8123
+      - GCP_PROJECT=local-project
+      - GCP_LOCATION=us-central1
+    depends_on:
+      - cloud-tasks-emulator
+    networks:
+      - cloud-tasks-network
+
+networks:
+  cloud-tasks-network:
+    driver: bridge

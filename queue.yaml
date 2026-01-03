@@ -1,0 +1,22 @@
+queue:
+  - name: projects/local-project/locations/us-central1/queues/default
+    rate_limits:
+      max_concurrent_dispatches: 1000
+      max_dispatches_per_second: 500
+    retry_config:
+      max_attempts: 100
+      max_retry_duration: 3600s
+      min_backoff: 0.100s
+      max_backoff: 3600s
+      max_doublings: 16
+
+  - name: projects/local-project/locations/us-central1/queues/snapshot-merge
+    rate_limits:
+      max_concurrent_dispatches: 1000
+      max_dispatches_per_second: 500
+    retry_config:
+      max_attempts: 100
+      max_retry_duration: 3600s
+      min_backoff: 0.100s
+      max_backoff: 3600s
+      max_doublings: 16

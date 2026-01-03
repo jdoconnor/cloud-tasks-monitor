@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Tasks Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background: #1a73e8;
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .header .status {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .controls {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #1557b0;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .queues-grid {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .queue-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+
+        .queue-card:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        }
+
+        .queue-card.active {
+            border: 2px solid #1a73e8;
+        }
+
+        .queue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .queue-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1a73e8;
+        }
+
+        .queue-state {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .queue-state.running {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .queue-state.paused {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .tasks-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .tasks-header {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .tasks-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tasks-table th {
+            background: #f5f5f5;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tasks-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 0.875rem;
+        }
+
+        .tasks-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .task-details {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+
+        .task-details pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin-top: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .expandable {
+            cursor: pointer;
+        }
+
+        .task-body {
+            max-width: 100%;
+            overflow: auto;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.method-get { background: #e3f2fd; color: #1565c0; }
+        .badge.method-post { background: #e8f5e9; color: #2e7d32; }
+        .badge.method-put { background: #fff3e0; color: #f57c00; }
+        .badge.method-delete { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Cloud Tasks Monitor</h1>
+        <div class="status" id="status">Connecting...</div>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <button id="refreshBtn" onclick="loadQueues()">Refresh</button>
+            <div class="auto-refresh">
+                <input type="checkbox" id="autoRefresh">
+                <label for="autoRefresh">Auto-refresh (5s)</label>
+            </div>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="queuesContainer" class="queues-grid">
+            <div class="loading">Loading queues...</div>
+        </div>
+
+        <div id="tasksContainer" style="display: none;">
+            <div class="tasks-section">
+                <div class="tasks-header" id="tasksHeader">Tasks</div>
+                <div id="tasksList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedQueue = null;
+        let autoRefreshInterval = null;
+
+        // Load health status
+        async function loadHealth() {
+            try {
+                const response = await fetch('/api/health');
+                const health = await response.json();
+                document.getElementById('status').textContent =
+                    `Connected to ${health.emulatorHost} | Project: ${health.project} | Location: ${health.location}`;
+            } catch (error) {
+                document.getElementById('status').textContent = 'Error connecting to emulator';
+            }
+        }
+
+        // Load all queues
+        async function loadQueues() {
+            const container = document.getElementById('queuesContainer');
+            const errorDiv = document.getElementById('error');
+
+            try {
+                errorDiv.style.display = 'none';
+                const response = await fetch('/api/queues');
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to fetch queues');
+                }
+
+                const queues = await response.json();
+
+                if (queues.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No queues found</div>';
+                    return;
+                }
+
+                container.innerHTML = queues.map(queue => `
+                    <div class="queue-card ${selectedQueue === queue.parsedName ? 'active' : ''}"
+                         onclick="selectQueue('${queue.parsedName}')">
+                        <div class="queue-header">
+                            <div class="queue-name">${queue.parsedName}</div>
+                            <div class="queue-state ${queue.state === 'RUNNING' ? 'running' : 'paused'}">
+                                ${queue.state || 'RUNNING'}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // If a queue was selected, reload its tasks
+                if (selectedQueue) {
+                    loadTasks(selectedQueue);
+                }
+            } catch (error) {
+                console.error('Error loading queues:', error);
+                errorDiv.textContent = `Error: ${error.message}`;
+                errorDiv.style.display = 'block';
+                container.innerHTML = '<div class="empty-state">Failed to load queues</div>';
+            }
+        }
+
+        // Select a queue and load its tasks
+        async function selectQueue(queueName) {
+            selectedQueue = queueName;
+            loadQueues(); // Refresh to show active state
+            loadTasks(queueName);
+        }
+
+        // Load tasks for a queue
+        async function loadTasks(queueName) {
+            const container = document.getElementById('tasksContainer');
+            const tasksList = document.getElementById('tasksList');
+            const tasksHeader = document.getElementById('tasksHeader');
+
+            container.style.display = 'block';
+            tasksHeader.textContent = `Tasks in ${queueName}`;
+            tasksList.innerHTML = '<div class="loading">Loading tasks...</div>';
+
+            try {
+                const response = await fetch(`/api/queues/${queueName}/tasks`);
+                const tasks = await response.json();
+
+                if (tasks.length === 0) {
+                    tasksList.innerHTML = '<div class="empty-state">No tasks in this queue</div>';
+                    return;
+                }
+
+                tasksList.innerHTML = `
+                    <table class="tasks-table">
+                        <thead>
+                            <tr>
+                                <th>Task Name</th>
+                                <th>Method</th>
+                                <th>URL</th>
+                                <th>Schedule Time</th>
+                                <th>Dispatch Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tasks.map((task, index) => {
+                                const taskName = task.name.split('/').pop();
+                                const scheduleTime = task.scheduleTime ?
+                                    new Date(task.scheduleTime.seconds * 1000).toLocaleString() : 'N/A';
+                                const method = task.httpRequest?.httpMethod || 'N/A';
+                                const url = task.httpRequest?.url || 'N/A';
+
+                                return `
+                                    <tr class="expandable" onclick="toggleTaskDetails(${index})">
+                                        <td>${taskName}</td>
+                                        <td><span class="badge method-${method.toLowerCase()}">${method}</span></td>
+                                        <td>${url}</td>
+                                        <td>${scheduleTime}</td>
+                                        <td>${task.dispatchCount || 0}</td>
+                                    </tr>
+                                    <tr id="task-details-${index}" style="display: none;">
+                                        <td colspan="5">
+                                            <div class="task-details">
+                                                <strong>Headers:</strong>
+                                                <pre>${JSON.stringify(task.httpRequest?.headers || {}, null, 2)}</pre>
+                                                ${task.httpRequest?.body ? `
+                                                    <strong>Body:</strong>
+                                                    <div class="task-body">
+                                                        <pre>${formatBody(task.httpRequest.body)}</pre>
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                tasksList.innerHTML = `<div class="error">Error loading tasks: ${error.message}</div>`;
+            }
+        }
+
+        // Toggle task details
+        function toggleTaskDetails(index) {
+            const detailsRow = document.getElementById(`task-details-${index}`);
+            detailsRow.style.display = detailsRow.style.display === 'none' ? 'table-row' : 'none';
+        }
+
+        // Format task body (try to parse JSON)
+        function formatBody(body) {
+            try {
+                const parsed = JSON.parse(body);
+                return JSON.stringify(parsed, null, 2);
+            } catch {
+                return body;
+            }
+        }
+
+        // Auto-refresh handler
+        document.getElementById('autoRefresh').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                autoRefreshInterval = setInterval(() => {
+                    loadQueues();
+                }, 5000);
+            } else {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+        });
+
+        // Initial load
+        loadHealth();
+        loadQueues();
+    </script>
+</body>
+</html>
